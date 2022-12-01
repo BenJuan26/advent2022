@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	advent "github.com/BenJuan26/advent2022"
 )
@@ -12,7 +13,25 @@ func Part1() {
 		panic(err)
 	}
 
-	fmt.Println(lines[0])
+	currentElf := 0
+	maxElf := 0
+	for _, line := range lines {
+		if line == "" {
+			if currentElf > maxElf {
+				maxElf = currentElf
+			}
+			currentElf = 0
+			continue
+		}
+
+		num, err := strconv.Atoi(line)
+		if err != nil {
+			panic(err)
+		}
+		currentElf += num
+	}
+
+	fmt.Println(maxElf)
 }
 
 func main() {
