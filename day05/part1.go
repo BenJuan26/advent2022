@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 
 	advent "github.com/BenJuan26/advent2022"
 )
@@ -13,8 +15,6 @@ func (s stack) Push(v rune) stack {
 }
 
 func (s stack) Pop() (stack, rune) {
-	// FIXME: What do we do if the stack is empty, though?
-
 	l := len(s)
 	return s[:l-1], rune(s[l-1])
 }
@@ -40,6 +40,8 @@ func Part1() {
 		stacks = append(stacks, "")
 	}
 
+	re := regexp.MustCompile(`move (\d+) from (\d+) to (\d+)`)
+	reversed := false
 	for _, line := range lines {
 		if len(line) > 0 && line[0] == '[' {
 			for n := 0; n < 9; n++ {
@@ -49,15 +51,42 @@ func Part1() {
 				}
 			}
 		} else if len(line) > 0 && line[0:4] == "move" {
+			match := re.FindStringSubmatch(line)
+			amount, err := strconv.Atoi(match[1])
+			if err != nil {
+				panic(err)
+			}
 
+			from, err := strconv.Atoi(match[2])
+			if err != nil {
+				panic(err)
+			}
+
+			to, err := strconv.Atoi(match[3])
+			if err != nil {
+				panic(err)
+			}
+
+			from -= 1
+			to -= 1
+
+			for i := 0; i < amount; i++ {
+				var value rune
+				stacks[from], value = stacks[from].Pop()
+				stacks[to] = stacks[to].Push(value)
+			}
+		} else if !reversed {
+			for i := range stacks {
+				stacks[i] = stacks[i].Reverse()
+			}
+			reversed = true
 		}
 	}
 
 	for _, stack := range stacks {
-		stack = stack.Reverse()
-		fmt.Println(stack)
+		fmt.Print(string(stack[len(stack)-1]))
 	}
-	// fmt.Println("answer")
+	fmt.Printf("\n")
 }
 
 func main() {
