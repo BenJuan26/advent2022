@@ -31,7 +31,6 @@ func (n *node) GetSize() int {
 }
 
 func (n *node) TotalBelowThreshold(threshold int) (size int, totalBelow int) {
-
 	for _, child := range n.Children {
 		if child.IsDir {
 			s, below := child.TotalBelowThreshold(threshold)
@@ -49,16 +48,32 @@ func (n *node) TotalBelowThreshold(threshold int) (size int, totalBelow int) {
 	return
 }
 
-func (n *node) SizeOfIdealDirectory(targetSize, currentBest int) int {
-	size := 0
-	best := currentBest
+func (n *node) SizeOfIdealDirectory(targetSize, currentBest int) (size int, best int) {
+	best = currentBest
+	if !n.IsDir {
+		size = n.Size
+		return
+	}
+
 	for _, child := range n.Children {
 		if !child.IsDir {
 			size += child.Size
 			continue
 		}
 
+		childSize, nextBest := child.SizeOfIdealDirectory(targetSize, best)
+		if nextBest < best {
+			best = nextBest
+		}
+
+		size += childSize
 	}
+
+	if size > targetSize && size < best {
+		best = size
+	}
+
+	return size, best
 }
 
 func Part1() {
@@ -68,7 +83,7 @@ func Part1() {
 	}
 
 	cdRegex := regexp.MustCompile(`\$ cd (.+)`)
-	rootNode := &node{Name: `/`}
+	rootNode := &node{Name: `/`, IsDir: true}
 	currentNode := rootNode
 	for _, line := range lines {
 		if match := cdRegex.FindStringSubmatch(line); match != nil {

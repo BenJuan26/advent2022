@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ func Part2() {
 	}
 
 	cdRegex := regexp.MustCompile(`\$ cd (.+)`)
-	rootNode := &node{Name: `/`}
+	rootNode := &node{Name: `/`, IsDir: true}
 	currentNode := rootNode
 	for _, line := range lines {
 		if match := cdRegex.FindStringSubmatch(line); match != nil {
@@ -59,5 +60,7 @@ func Part2() {
 	currentSpace := totalCapacity - rootSize
 	toRemove := requiredSpace - currentSpace
 
-	fmt.Println(rootNode.SizeOfIdealDirectory(toRemove, toRemove+1))
+	fmt.Printf("To remove: %d\n", toRemove)
+
+	fmt.Println(rootNode.SizeOfIdealDirectory(toRemove, math.MaxInt))
 }
