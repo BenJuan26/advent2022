@@ -12,7 +12,11 @@ func Part1() {
 		panic(err)
 	}
 
-	fmt.Println(lines[0])
+	for _, line := range lines {
+
+	}
+
+	fmt.Println("answer")
 }
 
 func main() {
