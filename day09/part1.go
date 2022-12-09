@@ -8,38 +8,6 @@ import (
 	advent "github.com/BenJuan26/advent2022"
 )
 
-func moveHead(hx, hy int, direction string) (int, int) {
-	if direction == "R" {
-		return hx - 1, hy
-	}
-
-	if direction == "L" {
-		return hx + 1, hy
-	}
-
-	if direction == "U" {
-		return hx, hy - 1
-	}
-
-	return hx, hy + 1
-}
-
-func moveTail(hx, hy int, direction string) (int, int) {
-	if direction == "R" {
-		return hx + 1, hy
-	}
-
-	if direction == "L" {
-		return hx - 1, hy
-	}
-
-	if direction == "U" {
-		return hx, hy + 1
-	}
-
-	return hx, hy - 1
-}
-
 func abs(x int) int {
 	if x < 0 {
 		return -x
@@ -48,15 +16,51 @@ func abs(x int) int {
 	return x
 }
 
-func Part1() {
+type Knot struct {
+	X int
+	Y int
+}
+
+func (k *Knot) Move(direction string) {
+	switch direction {
+	case "R":
+		k.X += 1
+	case "L":
+		k.X -= 1
+	case "U":
+		k.Y -= 1
+	case "D":
+		k.Y += 1
+	}
+}
+
+func (k *Knot) Follow(head *Knot) {
+	if k.X < head.X {
+		k.X += 1
+	} else if k.X > head.X {
+		k.X -= 1
+	}
+
+	if k.Y < head.Y {
+		k.Y += 1
+	} else if k.Y > head.Y {
+		k.Y -= 1
+	}
+}
+
+func SimulateRope(ropeLength int) int {
 	lines, err := advent.ReadInput()
 	if err != nil {
 		panic(err)
 	}
 
-	var hx, hy, tx, ty int
+	knots := []*Knot{}
+	for i := 0; i < ropeLength; i++ {
+		knots = append(knots, &Knot{})
+	}
 	visited := map[string]bool{}
 	numVisited := 1 // the initial position
+
 	for _, line := range lines {
 		fields := strings.Split(line, " ")
 		direction := fields[0]
@@ -66,22 +70,30 @@ func Part1() {
 			panic(err)
 		}
 
-		for i := 0; i < distance; i++ {
-			hx, hy = moveHead(hx, hy, direction)
-			dx := hx - tx
-			dy := hy - ty
-			if abs(dx) > 1 || abs(dy) > 1 {
-				tx, ty = moveTail(hx, hy, direction)
-				// fmt.Printf("%d, %d\n", tx, ty)
-				if _, ok := visited[fmt.Sprintf("%d,%d", tx, ty)]; !ok {
-					visited[fmt.Sprintf("%d,%d", tx, ty)] = true
-					numVisited += 1
+		for step := 0; step < distance; step++ {
+			// move the head
+			knots[0].Move(direction)
+			for i := 1; i < ropeLength; i++ {
+				head := knots[i-1] // "head" in this case means the knot ahead of the current one
+				tail := knots[i]
+				dx := head.X - tail.X
+				dy := head.Y - tail.Y
+				if abs(dx) > 1 || abs(dy) > 1 {
+					tail.Follow(head)
+					if _, ok := visited[fmt.Sprintf("%d,%d", tail.X, tail.Y)]; !ok && i == len(knots)-1 {
+						visited[fmt.Sprintf("%d,%d", tail.X, tail.Y)] = true
+						numVisited += 1
+					}
 				}
 			}
 		}
 	}
 
-	fmt.Println(numVisited)
+	return numVisited
+}
+
+func Part1() {
+	fmt.Println(SimulateRope(2))
 }
 
 func main() {
