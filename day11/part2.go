@@ -9,6 +9,25 @@ import (
 	advent "github.com/BenJuan26/advent2022"
 )
 
+func GCD(a, b int) int {
+	for b != 0 {
+		temp := b
+		b = a % b
+		a = temp
+	}
+	return a
+}
+
+func LCM(a, b int, extra ...int) int {
+	result := a * b / GCD(a, b)
+
+	for _, c := range extra {
+		result = LCM(result, c)
+	}
+
+	return result
+}
+
 func Part2() {
 	lines, err := advent.ReadInput()
 	if err != nil {
@@ -20,6 +39,7 @@ func Part2() {
 
 	monkeys := []*Monkey{}
 	currentMonkey := &Monkey{}
+	divisors := []int{}
 	for _, line := range lines {
 		switch stage {
 		case 1:
@@ -30,7 +50,7 @@ func Part2() {
 				if err != nil {
 					panic(err)
 				}
-				currentMonkey.Items = append(currentMonkey.Items, int64(item))
+				currentMonkey.Items = append(currentMonkey.Items, item)
 			}
 		case 2:
 			fields := strings.Split(line, "old ")
@@ -46,7 +66,8 @@ func Part2() {
 			if err != nil {
 				panic(err)
 			}
-			currentMonkey.TestDivisor = int64(temp)
+			currentMonkey.TestDivisor = temp
+			divisors = append(divisors, int(currentMonkey.TestDivisor))
 		case 4:
 			fields := strings.Split(line, "monkey ")
 			currentMonkey.TrueMonkey, err = strconv.Atoi(fields[1])
@@ -68,7 +89,7 @@ func Part2() {
 	}
 	monkeys = append(monkeys, currentMonkey)
 
-	fmt.Println(len(monkeys))
+	lcm := LCM(divisors[0], divisors[1], divisors[2:]...)
 
 	for round := 0; round < 10000; round++ {
 		for _, monkey := range monkeys {
@@ -79,7 +100,7 @@ func Part2() {
 					if err != nil {
 						panic(err)
 					}
-					monkey.Items[i] += int64(num)
+					monkey.Items[i] += num
 				} else { // multiplication
 					if monkey.OperationValue == "old" {
 						monkey.Items[i] *= monkey.Items[i]
@@ -88,17 +109,17 @@ func Part2() {
 						if err != nil {
 							panic(err)
 						}
-						monkey.Items[i] *= int64(num)
+						monkey.Items[i] *= num
 					}
 				}
-				// monkey.Items[i] /= 3
+				monkey.Items[i] %= lcm
 				if monkey.Items[i]%monkey.TestDivisor == 0 {
 					monkeys[monkey.TrueMonkey].Items = append(monkeys[monkey.TrueMonkey].Items, monkey.Items[i])
 				} else {
 					monkeys[monkey.FalseMonkey].Items = append(monkeys[monkey.FalseMonkey].Items, monkey.Items[i])
 				}
 			}
-			monkey.Items = []int64{}
+			monkey.Items = []int{}
 		}
 	}
 

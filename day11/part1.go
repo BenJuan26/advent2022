@@ -10,10 +10,10 @@ import (
 )
 
 type Monkey struct {
-	Items            []int64
+	Items            []int
 	OperationType    string
 	OperationValue   string
-	TestDivisor      int64
+	TestDivisor      int
 	TrueMonkey       int
 	FalseMonkey      int
 	TotalInspections int
@@ -40,7 +40,7 @@ func Part1() {
 				if err != nil {
 					panic(err)
 				}
-				currentMonkey.Items = append(currentMonkey.Items, int64(item))
+				currentMonkey.Items = append(currentMonkey.Items, item)
 			}
 		case 2:
 			fields := strings.Split(line, "old ")
@@ -56,7 +56,7 @@ func Part1() {
 			if err != nil {
 				panic(err)
 			}
-			currentMonkey.TestDivisor = int64(temp)
+			currentMonkey.TestDivisor = temp
 		case 4:
 			fields := strings.Split(line, "monkey ")
 			currentMonkey.TrueMonkey, err = strconv.Atoi(fields[1])
@@ -78,8 +78,6 @@ func Part1() {
 	}
 	monkeys = append(monkeys, currentMonkey)
 
-	fmt.Println(len(monkeys))
-
 	for round := 0; round < 10000; round++ {
 		for _, monkey := range monkeys {
 			for i := range monkey.Items {
@@ -89,7 +87,7 @@ func Part1() {
 					if err != nil {
 						panic(err)
 					}
-					monkey.Items[i] += int64(num)
+					monkey.Items[i] += num
 				} else { // multiplication
 					if monkey.OperationValue == "old" {
 						monkey.Items[i] *= monkey.Items[i]
@@ -98,7 +96,7 @@ func Part1() {
 						if err != nil {
 							panic(err)
 						}
-						monkey.Items[i] *= int64(num)
+						monkey.Items[i] *= num
 					}
 				}
 				monkey.Items[i] /= 3
@@ -108,7 +106,7 @@ func Part1() {
 					monkeys[monkey.FalseMonkey].Items = append(monkeys[monkey.FalseMonkey].Items, monkey.Items[i])
 				}
 			}
-			monkey.Items = []int64{}
+			monkey.Items = []int{}
 		}
 	}
 
