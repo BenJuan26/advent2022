@@ -8,15 +8,46 @@ import (
 	advent "github.com/BenJuan26/advent2022"
 )
 
-func ParseList(s string) ([]interface{}, int) {
-	var items []interface{}
+type ListItem struct {
+	Value  int
+	List   []ListItem
+	IsList bool
+}
+
+func (l ListItem) Len() int {
+	return len(l.List)
+}
+
+func (l ListItem) Less(i, j int) bool {
+	result, err := Compare(l.List[i], l.List[j])
+	return result && err == nil
+}
+
+func (l ListItem) Swap(i, j int) {
+	l.List[i], l.List[j] = l.List[j], l.List[i]
+}
+
+func NewList() ListItem {
+	l := ListItem{}
+	l.List = []ListItem{}
+	l.IsList = true
+
+	return l
+}
+
+func WrapWithList(v ListItem) ListItem {
+	return ListItem{0, []ListItem{v}, true}
+}
+
+func ParseList(s string) (ListItem, int) {
+	l := NewList()
 	// start at 1: we know the first is '['
 	tempNum := ""
 	i := 1
 	for i < len(s) {
 		if s[i] == '[' {
 			parsed, size := ParseList(s[i:])
-			items = append(items, parsed)
+			l.List = append(l.List, parsed)
 			i += size
 		} else if s[i] == ',' {
 			if tempNum != "" {
@@ -24,7 +55,7 @@ func ParseList(s string) ([]interface{}, int) {
 				if err != nil {
 					panic(err)
 				}
-				items = append(items, num)
+				l.List = append(l.List, ListItem{num, nil, false})
 				tempNum = ""
 			}
 		} else if s[i] == ']' {
@@ -33,10 +64,10 @@ func ParseList(s string) ([]interface{}, int) {
 				if err != nil {
 					panic(err)
 				}
-				items = append(items, num)
+				l.List = append(l.List, ListItem{num, nil, false})
 				tempNum = ""
 			}
-			return items, i
+			return l, i
 		} else {
 			// this should always be a digit
 			tempNum += string(s[i])
@@ -49,48 +80,52 @@ func ParseList(s string) ([]interface{}, int) {
 
 var ErrWrongOrder = errors.New("wrong order")
 
-func Compare(left, right interface{}) (bool, error) {
-	if l, ok := left.(int); ok {
-		if r, ok := right.(int); ok {
-			if l < r {
+func Compare(left, right ListItem) (bool, error) {
+	if !left.IsList {
+		if !right.IsList {
+			// both ints
+			if left.Value < right.Value {
+				// we're done, the order is correct
 				return true, nil
 			}
+
+			if left.Value > right.Value {
+				// we're done, the order is not correct
+				return false, ErrWrongOrder
+			}
+
+			// the order is not incorrect yet, but we're not done
+			return false, nil
 		} else {
 			// left is int, right is list
-			rList, ok := right.([]interface{})
-			if !ok {
-				panic(fmt.Errorf("right value %+v was not an int or a list", right))
-			}
-			lList := []int{l}
-			return Compare(lList, rList)
+			return Compare(WrapWithList(left), right)
 		}
 	} else {
-		lList, ok := left.([]interface{})
-		if !ok {
-			panic(fmt.Errorf("left value %+v was not an int or a list", left))
-		}
-		if r, ok := right.(int); ok {
-			if l < r {
-				return Compare(lList, []int{r})
-			}
+		if !right.IsList {
+			// left is list, right is int
+			return Compare(left, WrapWithList(right))
 		} else {
 			// both lists
-			rList, ok := right.([]interface{})
-			if !ok {
-				panic(fmt.Errorf("right value %+v was not an int or a list", right))
+			if len(left.List) == 0 && len(right.List) > 0 {
+				// left ran out first
+				return true, nil
+			}
+			if len(left.List) > 0 && len(right.List) == 0 {
+				// right ran out first
+				return false, ErrWrongOrder
 			}
 			i := 0
-			for i < len(lList) && i < len(rList) {
-				result, err := Compare(lList[i], rList[i])
-				if err != nil || result == true {
+			for i < len(left.List) && i < len(right.List) {
+				result, err := Compare(left.List[i], right.List[i])
+				if err != nil || result {
 					return result, err
 				}
 				i += 1
-				if i == len(lList) && i < len(rList) {
+				if i == len(left.List) && i < len(right.List) {
 					// left ran out first
 					return true, nil
 				}
-				if i < len(lList) && i == len(rList) {
+				if i < len(left.List) && i == len(right.List) {
 					// right ran out first
 					return false, ErrWrongOrder
 				}
@@ -98,7 +133,7 @@ func Compare(left, right interface{}) (bool, error) {
 		}
 	}
 
-	return false, errors.New("unreachable?")
+	return false, nil
 }
 
 func Part1() {
@@ -109,16 +144,17 @@ func Part1() {
 
 	total := 0
 	for i := 0; i < len(lines); i += 3 {
-		// remove the outside brackets since an outer list is always guaranteed
 		left, _ := ParseList(lines[i])
 		right, _ := ParseList(lines[i+1])
 
 		result, err := Compare(left, right)
-		if err != nil && err.Error() != ErrWrongOrder.Error() {
+		if err != nil && !errors.Is(err, ErrWrongOrder) {
 			panic(err)
 		}
+
 		if err == nil && result == true {
-			total += (i / 3) + 1
+			pairIndex := (i / 3) + 1
+			total += pairIndex
 		}
 	}
 
