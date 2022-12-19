@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,7 @@ type Valve struct {
 	Name     string
 	FlowRate int
 	Tunnels  []string
+	Score    int
 }
 
 func MinDist(q map[string]Valve, dist map[string]int) Valve {
@@ -78,6 +80,58 @@ func Dijkstra(valves map[string]Valve, source Valve) (map[string]int, map[string
 	return dist, prev
 }
 
+func TryOptions(valves map[string]Valve, source string, timeElapsed, totalPressure int, opened_ map[string]bool) (int, int) {
+	if timeElapsed > 30 {
+		return timeElapsed, totalPressure
+	}
+
+	dist, _ := Dijkstra(valves, valves[source])
+	scores := []Valve{}
+	for vName, distToValve := range dist {
+		if opened_[vName] {
+			continue
+		}
+		v := valves[vName]
+		v.Score = (30 - distToValve) * v.FlowRate
+		scores = append(scores, v)
+	}
+
+	sort.Slice(scores, func(i, j int) bool {
+		return scores[i].Score > scores[j].Score
+	})
+
+	// try the 12 best options
+	maxTime := timeElapsed
+	maxPressure := math.MinInt
+	found := false
+	for i, v := range scores {
+		if i > 11 {
+			break
+		}
+
+		opened := map[string]bool{}
+		for k, v := range opened_ {
+			opened[k] = v
+		}
+		opened[v.Name] = true
+
+		t := timeElapsed + dist[v.Name] + 1
+		time, pressure := TryOptions(valves, v.Name, t,
+			totalPressure+(30-t)*v.FlowRate, opened)
+		if pressure > maxPressure && time <= 30 {
+			maxTime = time
+			maxPressure = pressure
+			found = true
+		}
+	}
+
+	if !found {
+		return timeElapsed, totalPressure
+	}
+
+	return maxTime, maxPressure
+}
+
 func Part1() {
 	lines, err := advent.ReadInput()
 	if err != nil {
@@ -104,41 +158,11 @@ func Part1() {
 			tunnels = append(tunnels, tunnel)
 		}
 
-		valves[valveName] = Valve{valveName, rate, tunnels}
+		valves[valveName] = Valve{valveName, rate, tunnels, 0}
 	}
 
-	timeElapsed := 0
-	source := "AA"
-	totalPressure := 0
 	opened := map[string]bool{"AA": true}
-	for timeElapsed <= 30 {
-		dist, _ := Dijkstra(valves, valves[source])
-		maxScore := math.MinInt
-		var maxValve Valve
-		found := false
-		for vName, distToValve := range dist {
-			if opened[vName] {
-				continue
-			}
-			v := valves[vName]
-			score := (30 - distToValve) * v.FlowRate
-			if score > maxScore {
-				maxScore = score
-				maxValve = v
-				found = true
-			}
-		}
-		if !found {
-			panic("not found")
-		}
-		source = maxValve.Name
-		timeElapsed += dist[maxValve.Name] + 1
-		if timeElapsed > 30 {
-			break // not enough time to get to and open the valve
-		}
-		totalPressure += (30 - timeElapsed) * maxValve.FlowRate
-		opened[maxValve.Name] = true
-	}
+	_, totalPressure := TryOptions(valves, "AA", 0, 0, opened)
 
 	fmt.Println(totalPressure)
 }
